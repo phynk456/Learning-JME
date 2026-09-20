@@ -1,0 +1,35 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+tasks.register('clean', Delete) {
+    delete rootProject.buildDir
+}
+
+
+
+subprojects {
+    ext {
+        JAVA_VERSION = 25
+    }
+
+    plugins.withType(JavaPlugin).tap {
+        configureEach {
+            java {
+                toolchain {
+                    languageVersion = JavaLanguageVersion.of(JAVA_VERSION)
+                }
+                sourceCompatibility = JavaVersion.toVersion(JAVA_VERSION)
+                targetCompatibility = JavaVersion.toVersion(JAVA_VERSION)
+            }
+        }
+    }
+}
+
+
+tasks.register('buildAllDistributions') {
+    dependsOn ':desktop:buildAllDistributions'
+
+    doLast {
+        println(" #### Check the individual modules build/distributions folders for distributable zips etc #### ")
+    }
+}
+
