@@ -16,5 +16,7 @@ dependencies {
 
     libs.jmeNifty
 
+    compileOnly libs.lombok
+    annotationProcessor libs.lombok
 
 }

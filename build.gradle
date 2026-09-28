@@ -8,7 +8,7 @@ tasks.register('clean', Delete) {
 
 subprojects {
     ext {
-        JAVA_VERSION = 25
+        JAVA_VERSION = 21
     }
 
     plugins.withType(JavaPlugin).tap {
