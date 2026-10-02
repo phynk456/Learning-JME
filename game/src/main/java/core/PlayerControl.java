@@ -11,29 +11,26 @@ import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
 import com.jme3.math.Vector3f;
 import com.jme3.renderer.Camera;
+import com.jme3.renderer.RenderManager;
+import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Spatial;
+import com.jme3.scene.control.AbstractControl;
 import lombok.Getter;
-import org.jspecify.annotations.NullMarked;
 
-@NullMarked
-public final class Player implements ActionListener {
+public final class PlayerControl extends AbstractControl implements ActionListener {
 
     @Getter private CharacterControl characterControl;
     @Getter private final ChaseCamera chaseCam;
-    @Getter private final Spatial spatial;
 
-    private final AnimComposer animComposer;
-    private final Action walk, halt;
+    private AnimComposer animComposer;
+    private Action walk, halt;
 
-    private boolean forward, backward, left, right;
+    private boolean forward, backward, left, right, movable = false;
 
-    Player(InputManager inputManager, Spatial newSpatial, Camera cam)
+    PlayerControl(InputManager inputManager, Camera cam)
     {
 
-        spatial = newSpatial;
-        spatial.setName("Character");
-
-        chaseCam = new ChaseCamera(cam, spatial, inputManager);
+        chaseCam = new ChaseCamera(cam, inputManager);
         chaseCam.setMaxDistance(50);
         chaseCam.setMinDistance(2);
 
@@ -42,6 +39,15 @@ public final class Player implements ActionListener {
         inputManager.addMapping("A", new KeyTrigger(KeyInput.KEY_A));
         inputManager.addMapping("D", new KeyTrigger(KeyInput.KEY_D));
         inputManager.addListener(this, "W", "S", "A", "D");
+
+    }
+
+    @Override
+    public void setSpatial(Spatial newSpatial) {
+
+        spatial = newSpatial;
+        spatial.setName("Character");
+        spatial.addControl(chaseCam);
 
         animComposer = spatial.getControl(AnimComposer.class);
         walk = animComposer.action("Walk");
@@ -62,18 +68,35 @@ public final class Player implements ActionListener {
             case "A" -> left = isPressed;
             case "D" -> right = isPressed;
         }
-    }
 
-    public void update()
-    {
-        Vector3f walkDir = new Vector3f(0, 0, 0);
+        movable = forward | backward | left | right;
 
-        if ((forward | backward | left | right))
+        if (movable)
         {
             if (animComposer.getCurrentAction() != walk)
             {
                 animComposer.setCurrentAction("Walk");
             }
+        }
+        else
+        {
+            if (animComposer.getCurrentAction() != halt)
+            {
+                animComposer.setCurrentAction("Halt");
+            }
+            characterControl.setWalkDirection(Vector3f.ZERO);
+        }
+
+    }
+
+    @Override
+    public void controlUpdate(float tpf)
+    {
+
+        if (!movable)
+        {
+
+            Vector3f walkDir = new Vector3f(0, 0, 0);
 
             float camHorizontalRotation = chaseCam.getHorizontalRotation();
             Vector3f camDir = new Vector3f((float) Math.cos(camHorizontalRotation), 0, (float) Math.sin(camHorizontalRotation));
@@ -89,16 +112,15 @@ public final class Player implements ActionListener {
                 walkDir.addLocal(left ? camLeft : camLeft.negate());
             }
 
-            characterControl.setViewDirection(characterControl.getViewDirection(Vector3f.ZERO).interpolateLocal(walkDir, 0.005f));
+            walkDir = walkDir.normalize();
+            characterControl.setViewDirection(walkDir);
+            characterControl.setWalkDirection(walkDir.mult(0.12f));
 
         }
-        else if (animComposer.getCurrentAction() != halt)
-        {
-            animComposer.setCurrentAction("Halt");
-        }
 
-
-        characterControl.setWalkDirection(walkDir.normalize().mult(0.12f));
     }
+
+    @Override
+    public void controlRender(RenderManager rm, ViewPort vp) {}
 
 }

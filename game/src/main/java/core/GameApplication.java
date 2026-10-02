@@ -3,11 +3,9 @@ package core;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.PhysicsSpace;
-import com.jme3.bullet.control.CharacterControl;
 import com.jme3.bullet.control.PhysicsControl;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.util.CollisionShapeFactory;
-import com.jme3.input.ChaseCamera;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.LightProbe;
 import com.jme3.math.ColorRGBA;
@@ -16,8 +14,6 @@ import org.jspecify.annotations.NullUnmarked;
 
 @NullUnmarked
 public final class GameApplication extends SimpleApplication {
-
-    private Player player;
 
     @Override
     public void simpleInitApp()
@@ -44,16 +40,12 @@ public final class GameApplication extends SimpleApplication {
             physicsSpace.add(control);
         }
 
-        player = new Player(inputManager, assetManager.loadModel(AssetPaths.PLAYER_MODEL), cam);
-        physicsSpace.add(player.getCharacterControl());
-        rootNode.attachChild(player.getSpatial());
+        Spatial player = assetManager.loadModel(AssetPaths.PLAYER_MODEL);
+        PlayerControl control = new PlayerControl(inputManager, cam);
+        player.addControl(control);
+        physicsSpace.add(control.getCharacterControl());
+        rootNode.attachChild(player);
 
-    }
-
-    @Override
-    public void simpleUpdate(float tpf)
-    {
-        player.update();
     }
 
 }
