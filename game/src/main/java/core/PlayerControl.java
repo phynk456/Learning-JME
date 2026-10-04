@@ -1,7 +1,6 @@
 package core;
 
 import com.jme3.anim.AnimComposer;
-import com.jme3.anim.tween.action.Action;
 import com.jme3.anim.tween.action.LinearBlendSpace;
 import com.jme3.bullet.control.CharacterControl;
 import com.jme3.input.ChaseCamera;
@@ -16,17 +15,26 @@ import com.jme3.renderer.ViewPort;
 import com.jme3.scene.Spatial;
 import com.jme3.scene.control.AbstractControl;
 import lombok.Getter;
+import org.jspecify.annotations.NullMarked;
+import org.jspecify.annotations.NullUnmarked;
 
+@NullUnmarked
 public final class PlayerControl extends AbstractControl implements ActionListener {
 
     @Getter private CharacterControl characterControl;
     @Getter private final ChaseCamera chaseCam;
 
-    private AnimComposer animComposer;
-    private Action walk, halt;
+    private AnimComposerWrapper animComposer;
+    private AnimComposerWrapper.ActionWrapper walk, halt;
+
+    private final Vector3f
+        walkDir = new Vector3f(),
+        camDir = new Vector3f(),
+        camLeft = new Vector3f();
 
     private boolean forward, backward, left, right, movable = false;
 
+    @NullMarked
     PlayerControl(InputManager inputManager, Camera cam)
     {
 
@@ -49,10 +57,10 @@ public final class PlayerControl extends AbstractControl implements ActionListen
         spatial.setName("Character");
         spatial.addControl(chaseCam);
 
-        animComposer = spatial.getControl(AnimComposer.class);
+        animComposer = new AnimComposerWrapper(spatial.getControl(AnimComposer.class));
         walk = animComposer.action("Walk");
-        walk.setSpeed(1.15d);
-        halt = animComposer.actionBlended("Halt", new LinearBlendSpace(0f, 0.5f), "Stand", "Walk");
+        walk.getAction().setSpeed(1.15d);
+        halt = animComposer.action("Halt", new LinearBlendSpace(0f, 0.5f), "Stand", "Walk");
 
         characterControl = spatial.getControl(CharacterControl.class);
 
@@ -69,21 +77,15 @@ public final class PlayerControl extends AbstractControl implements ActionListen
             case "D" -> right = isPressed;
         }
 
-        movable = forward | backward | left | right;
+        movable = (forward != backward) | (left != right);
 
         if (movable)
         {
-            if (animComposer.getCurrentAction() != walk)
-            {
-                animComposer.setCurrentAction("Walk");
-            }
+            animComposer.setCurrentAction(walk);
         }
         else
         {
-            if (animComposer.getCurrentAction() != halt)
-            {
-                animComposer.setCurrentAction("Halt");
-            }
+            animComposer.setCurrentAction(halt);
             characterControl.setWalkDirection(Vector3f.ZERO);
         }
 
@@ -93,27 +95,27 @@ public final class PlayerControl extends AbstractControl implements ActionListen
     public void controlUpdate(float tpf)
     {
 
-        if (!movable)
+        if (movable)
         {
+            {
+                float camHorizontalRotation = chaseCam.getHorizontalRotation();
+                camDir.set((float) Math.cos(camHorizontalRotation), 0, (float) Math.sin(camHorizontalRotation));
+            }
 
-            Vector3f walkDir = new Vector3f(0, 0, 0);
+            walkDir.set(0, 0, 0);
 
-            float camHorizontalRotation = chaseCam.getHorizontalRotation();
-            Vector3f camDir = new Vector3f((float) Math.cos(camHorizontalRotation), 0, (float) Math.sin(camHorizontalRotation));
-
-            if (backward || forward)
+            if (forward != backward)
             {
                 walkDir.addLocal(backward ? camDir : camDir.negate());
             }
 
-            if (left || right)
+            if (left != right)
             {
-                Vector3f camLeft = new Vector3f(-camDir.z, 0, camDir.x);
+                camLeft.set(-camDir.z, 0, camDir.x);
                 walkDir.addLocal(left ? camLeft : camLeft.negate());
             }
 
-            walkDir = walkDir.normalize();
-            characterControl.setViewDirection(walkDir);
+            characterControl.setViewDirection(walkDir.normalizeLocal());
             characterControl.setWalkDirection(walkDir.mult(0.12f));
 
         }
